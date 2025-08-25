@@ -1,7 +1,8 @@
 const express = require('express');
 const multer = require('multer');
-const { register, login, editProfile, getAllUsers,getUserById } = require('../controllers/userController');
-const auth = require('../middleware/auth');
+const { register, login, editProfile, getAllUsers, getUserById } = require('../controllers/userController');
+
+const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -15,10 +16,15 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+// routes
 router.post('/register', register);
 router.post('/login', login);
-router.get('/', getAllUsers);
-router.get('/:id', getUserById);
-router.put('/edit-profile', auth, upload.single('profileImage'), editProfile);
+
+// **เฉพาะ admin**
+router.get('/', authMiddleware, adminMiddleware, getAllUsers);
+router.get('/:id', authMiddleware, adminMiddleware, getUserById);
+
+// edit profile สำหรับ user ปกติ
+router.put('/edit-profile', authMiddleware, upload.single('profileImage'), editProfile);
 
 module.exports = router;

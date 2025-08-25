@@ -7,20 +7,26 @@ const JWT_SECRET = "mysecretkey"; // ควรเก็บใน .env จริ�
 // Register (ไม่อัปโหลดรูปตอนสมัคร)
 exports.register = async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, role } = req.body;
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) return res.status(400).json({ error: "Email already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const newRole = role === "admin" ? "admin" : "user"; // default user
+
     const user = await prisma.user.create({
-      data: { email, password: hashedPassword, name }
+      data: { email, password: hashedPassword, name, role: newRole }
     });
 
-    res.status(201).json({ message: "User registered", user: { id: user.id, email: user.email, name: user.name } });
+    res.status(201).json({ 
+      message: "User registered", 
+      user: { id: user.id, email: user.email, name: user.name, role: user.role } 
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 // Login
 exports.login = async (req, res) => {
@@ -32,12 +38,13 @@ exports.login = async (req, res) => {
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) return res.status(400).json({ error: "Invalid credentials" });
 
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "1h" });
-    res.json({ message: "Login success", token });
+    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: "1h" });
+    res.json({ message: "Login success", token, role: user.role });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 // Edit Profile + Upload Profile Image
 // Edit Profile + Upload Profile Image + Update Email + Update Password
@@ -91,15 +98,17 @@ exports.editProfile = async (req, res) => {
 
 
 // ดึงข้อมูล user ทั้งหมด
+
 exports.getAllUsers = async (req, res) => {
   try {
+    // ต้องเรียก adminMiddleware ก่อน route นี้
     const users = await prisma.user.findMany({
       select: {
         id: true,
         name: true,
         email: true,
-        password: true,   // เพิ่มตรงนี้
         profileImage: true,
+        role: true,
         createdAt: true,
         updatedAt: true
       }
