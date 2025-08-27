@@ -1,22 +1,26 @@
 const express = require("express");
 const router = express.Router();
-const upload = require("../middleware/upload"); // multer
-const { requireAuth } = require("../middleware/auth");
+const upload = require("../middleware/upload");
+const { authMiddleware, adminMiddleware } = require("../middleware/auth");
 const postCtrl = require("../controllers/postController");
 
 // posts
-router.post("/", requireAuth, upload.single("image"), postCtrl.createPost);
-router.get("/", requireAuth, postCtrl.listPosts);
-router.get("/:id", requireAuth, postCtrl.getPost);
-router.put("/:id", requireAuth, upload.single("image"), postCtrl.updatePost);
-router.delete("/:id", requireAuth, postCtrl.deletePost);
+router.post("/", authMiddleware, upload.single("image"), postCtrl.createPost);
+router.get("/", authMiddleware, postCtrl.listPosts);
+router.get("/:id", authMiddleware, postCtrl.getPost);
+router.put("/:id", authMiddleware, upload.single("image"), postCtrl.updatePost);
+router.delete("/:id", authMiddleware, postCtrl.deletePost);
 
-// comments (REST fallback and persistence)
-router.post("/:id/comments", requireAuth, postCtrl.addComment);
-router.put("/:postId/comments/:commentId", requireAuth, postCtrl.updateComment);
+// comments
+router.post("/:id/comments", authMiddleware, postCtrl.addComment);
+router.put(
+  "/:postId/comments/:commentId",
+  authMiddleware,
+  postCtrl.updateComment
+);
 router.delete(
   "/:postId/comments/:commentId",
-  requireAuth,
+  authMiddleware,
   postCtrl.deleteComment
 );
 

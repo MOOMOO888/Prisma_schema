@@ -1,42 +1,44 @@
-exports.addComment = async (req, res) => {
-  try {
-    // แปลงให้แน่ใจว่าเป็นตัวเลข (ถ้า id ใน DB เป็น Int)
-    const authorId = Number(req.user.userId);
-    const postId = Number(req.params.id);
-    const { text } = req.body;
+exports.createPost = (req, res) => {
+  console.log("createPost called", req.body, req.file, req.user);
+  res.status(201).json({ message: "Post created" });
+};
 
-    if (!postId || Number.isNaN(postId)) {
-      return res.status(400).json({ error: "invalid post id" });
-    }
-    if (!text || !text.trim()) {
-      return res.status(400).json({ error: "text is required" });
-    }
+exports.listPosts = (req, res) => {
+  console.log("listPosts called", req.user);
+  res.json([{ id: 1, title: "Post 1" }]);
+};
 
-    // ตรวจว่าโพสต์มีอยู่ (findUniqueOrThrow จะโยน Prisma.PrismaClientKnownRequestError หรือ Prisma.NotFoundError ขึ้นกับเวอร์ชัน)
-    await prisma.post.findUniqueOrThrow({ where: { id: postId } });
+exports.getPost = (req, res) => {
+  console.log("getPost called", req.params.id);
+  res.json({ id: req.params.id, title: "Sample Post" });
+};
 
-    // สร้างคอมเมนต์
-    const comment = await prisma.comment.create({
-      data: { postId, authorId, text: text.trim() },
-      include: {
-        author: { select: { id: true, name: true, profileImage: true } },
-      },
-    });
+exports.updatePost = (req, res) => {
+  console.log("updatePost called", req.params.id, req.body, req.file);
+  res.json({ message: `Post ${req.params.id} updated` });
+};
 
-    // ส่ง event แบบ realtime (ถ้ามี io)
-    const io = req.app.get("io");
-    if (io) {
-      io.to(`post:${postId}`).emit("comment:new", comment);
-    }
+exports.deletePost = (req, res) => {
+  console.log("deletePost called", req.params.id);
+  res.json({ message: `Post ${req.params.id} deleted` });
+};
 
-    return res.status(201).json(comment);
-  } catch (err) {
-    // Prisma อาจโยนข้อผิดพลาดหลายแบบ — ตรวจข้อความ/รหัสข้อผิดพลาด
-    // ตัวอย่างการจับเมื่อไม่พบ (ขึ้นกับ Prisma เวอร์ชัน): err.code === 'P2025' หรือ err.name === 'NotFoundError'
-    if (err?.code === "P2025" || err?.name === "NotFoundError") {
-      return res.status(404).json({ error: "Post not found" });
-    }
-    console.error("addComment error:", err);
-    return res.status(500).json({ error: "Internal server error" });
-  }
+exports.addComment = (req, res) => {
+  console.log("addComment called", req.params.id, req.body.text);
+  res.status(201).json({ message: `Comment added to post ${req.params.id}` });
+};
+
+exports.updateComment = (req, res) => {
+  console.log(
+    "updateComment called",
+    req.params.postId,
+    req.params.commentId,
+    req.body.text
+  );
+  res.json({ message: `Comment ${req.params.commentId} updated` });
+};
+
+exports.deleteComment = (req, res) => {
+  console.log("deleteComment called", req.params.postId, req.params.commentId);
+  res.json({ message: `Comment ${req.params.commentId} deleted` });
 };
